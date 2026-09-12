@@ -1,0 +1,188 @@
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Fluent 2 Design Tokens - BrandLexicon */
+:root {
+  --radius: 0.5rem;
+
+  /* Fluent 2 Neutral Background */
+  --background: #FAFAFA;
+  --foreground: #242424;
+
+  /* Fluent 2 Surface */
+  --card: #FFFFFF;
+  --card-foreground: #242424;
+
+  /* Fluent 2 Popover */
+  --popover: #FFFFFF;
+  --popover-foreground: #242424;
+
+  /* Fluent 2 Brand Blue - primary actions */
+  --primary: #0F6CBD;
+  --primary-foreground: #FFFFFF;
+
+  /* Fluent 2 Subtle */
+  --secondary: #F5F5F5;
+  --secondary-foreground: #242424;
+
+  /* Fluent 2 Muted */
+  --muted: #F0F0F0;
+  --muted-foreground: #605E5C;
+
+  /* Fluent 2 Subtle neutral */
+  --accent: #F5F5F5;
+  --accent-foreground: #242424;
+
+  /* Fluent 2 Red */
+  --destructive: #C4314B;
+  --destructive-foreground: #FFFFFF;
+
+  /* Fluent 2 Neutral strokes */
+  --border: #E0E0E0;
+  --input: #E0E0E0;
+  --ring: #0F6CBD;
+
+  /* Charts */
+  --chart-1: #0F6CBD;
+  --chart-2: #107C10;
+  --chart-3: #6B5CE7;
+  --chart-4: #D83B01;
+  --chart-5: #008272;
+
+  /* Sidebar */
+  --sidebar: #FAFAFA;
+  --sidebar-foreground: #242424;
+  --sidebar-primary: #0F6CBD;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F5F5F5;
+  --sidebar-accent-foreground: #242424;
+  --sidebar-border: #E0E0E0;
+  --sidebar-ring: #0F6CBD;
+}
+
+.dark {
+  /* Fluent 2 Dark Neutral Background */
+  --background: #1F1F1F;
+  --foreground: #FFFFFF;
+
+  --card: #2D2D2D;
+  --card-foreground: #FFFFFF;
+
+  --popover: #2D2D2D;
+  --popover-foreground: #FFFFFF;
+
+  --primary: #47A8E8;
+  --primary-foreground: #1F1F1F;
+
+  --secondary: #3D3D3D;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #3D3D3D;
+  --muted-foreground: #C8C6C4;
+
+  --accent: #3D3D3D;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #E74856;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #404040;
+  --input: #404040;
+  --ring: #47A8E8;
+
+  --chart-1: #47A8E8;
+  --chart-2: #5BB75B;
+  --chart-3: #8B7EF0;
+  --chart-4: #F76D5D;
+  --chart-5: #00B2A4;
+
+  --sidebar: #2D2D2D;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #47A8E8;
+  --sidebar-primary-foreground: #1F1F1F;
+  --sidebar-accent: #3D3D3D;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #404040;
+  --sidebar-ring: #47A8E8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+/* Fluent 2 elevation shadows */
+.fluent-shadow-4 {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.fluent-shadow-8 {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.04);
+}
+
+.fluent-shadow-16 {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* Fluent 2 corner radii */
+.fluent-radius-sm {
+  border-radius: 4px;
+}
+
+.fluent-radius-md {
+  border-radius: 8px;
+}
+
+.fluent-radius-lg {
+  border-radius: 12px;
+}
