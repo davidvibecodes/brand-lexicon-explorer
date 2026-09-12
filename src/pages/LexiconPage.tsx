@@ -199,7 +199,7 @@ export default function LexiconPage() {
         <div className="absolute top-4 left-4 right-4 z-20 flex items-center gap-3">
           <SearchBox
             onSelect={handleSearch}
-            placeholder="Search any word…"
+            placeholder="Search the lexicon…"
             className="w-72"
           />
 

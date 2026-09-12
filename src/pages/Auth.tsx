@@ -118,7 +118,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   </div>
                   <CardTitle className="text-xl">BrandLexicon</CardTitle>
                   <CardDescription>
-                    Sign in to save and manage your brand words
+                    Sign in to build your brand word catalog
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleEmailSubmit}>

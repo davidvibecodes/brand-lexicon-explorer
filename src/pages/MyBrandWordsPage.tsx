@@ -57,7 +57,7 @@ export default function MyBrandWordsPage() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Sign in to see your brand words</h2>
           <p className="text-sm text-muted-foreground mb-6 max-w-md">
-            Create an account to save and manage your personal brand word associations.
+            Create an account to save and manage the words and concepts you want to associate with your brand.
           </p>
           <Button onClick={() => navigate("/auth?returnTo=/my-brand-words")}>
             Sign in
@@ -75,7 +75,7 @@ export default function MyBrandWordsPage() {
           <div>
             <h1 className="text-2xl font-bold">My Brand Words</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Your personal brand word associations
+              A personal catalog of the words you've connected to your brand
             </p>
           </div>
           <Button
@@ -96,7 +96,7 @@ export default function MyBrandWordsPage() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter brand words…"
+            placeholder="Filter your brand words…"
             className="pl-9"
           />
         </div>
@@ -112,8 +112,8 @@ export default function MyBrandWordsPage() {
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <p className="text-sm">
               {searchQuery
-                ? "No brand words match your search."
-                : "No brand words yet. Add one to get started!"}
+                ? "No brand words match what you searched for."
+                : "You haven't added any brand words yet. Create your first one to start building your catalog."}
             </p>
           </div>
         ) : (
@@ -199,10 +199,8 @@ export default function MyBrandWordsPage() {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center">
           <div className="bg-background border border-border rounded-xl shadow-xl max-w-sm w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold mb-2">Delete brand word?</h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              This action cannot be undone. The brand word and all its associations
-              will be permanently removed.
+            <h3 className="text-lg font-semibold mb-2">Delete this brand word?</h3>
+            <p className="text-sm text-muted-foreground mb-5">This can't be undone. The brand word and all of its concept associations will be permanently removed.
             </p>
             <div className="flex gap-3">
               <Button

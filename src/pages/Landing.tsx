@@ -44,17 +44,11 @@ export default function Landing() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight leading-tight mb-6">
-            Explore the
-            <br />
-            <span style={{ color: "#0F6CBD" }}>English Language</span>
-            <br />
-            Network
+            Node Words For Your Brand
           </h1>
 
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
-            BrandLexicon is an interactive explorer for the conceptual connections
-            between words — and a workspace for building brand-word associations
-            on top of that knowledge graph.
+            Explore words as nodes in a living knowledge graph. Build associations between concepts and your brand to create a custom language map that's uniquely yours.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -64,7 +58,7 @@ export default function Landing() {
               className="px-8 h-12 text-base"
               style={{ backgroundColor: "#0F6CBD" }}
             >
-              Launch Explorer
+              Start Exploring
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <Button
@@ -73,7 +67,7 @@ export default function Landing() {
               onClick={() => navigate("/auth?returnTo=/my-brand-words")}
               className="px-8 h-12 text-base"
             >
-              Start Building
+              Create Account
             </Button>
           </div>
         </motion.div>
@@ -87,20 +81,20 @@ export default function Landing() {
         >
           <FeatureCard
             icon={<Network className="h-5 w-5" />}
-            title="Interactive Graph"
-            description="Explore word relationships through a force-directed graph with pan, zoom, and click-to-explore navigation."
+            title="Visual Word Network"
+            description="Navigate a force-directed graph of related concepts. Pan, zoom, and double-click to explore deeper connections."
             color="#0F6CBD"
           />
           <FeatureCard
             icon={<Tags className="h-5 w-5" />}
-            title="Brand Associations"
-            description="Create and manage brand word associations tied to concepts in the global knowledge graph."
+            title="Your Brand Words"
+            description="Connect your brand to concepts in the graph. Every association you save becomes part of your personal workspace."
             color="#107C10"
           />
           <FeatureCard
             icon={<Globe className="h-5 w-5" />}
-            title="Global Workspace"
-            description="Share brand word associations across your team with admin-managed global collections."
+            title="Shared Catalog"
+            description="Browse globally shared brand words created by others. Admins can add and manage shared entries for everyone to explore."
             color="#6B5CE7"
           />
         </motion.div>

@@ -57,8 +57,8 @@ export default function GlobalBrandWordsPage() {
             <h1 className="text-2xl font-bold">Global Brand Words</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {isAdmin
-                ? "Manage shared brand word associations"
-                : "Shared brand word associations (read-only)"}
+                ? "Manage the shared brand words catalog"
+                : "Browse the shared catalog of brand words"}
             </p>
           </div>
           {isAdmin && (
@@ -81,7 +81,7 @@ export default function GlobalBrandWordsPage() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter global brand words…"
+            placeholder="Filter the shared catalog…"
             className="pl-9"
           />
         </div>
@@ -97,8 +97,8 @@ export default function GlobalBrandWordsPage() {
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <p className="text-sm">
               {searchQuery
-                ? "No brand words match your search."
-                : "No global brand words yet."}
+                ? "Nothing matches what you searched for."
+                : "No shared brand words yet. Admins can add the first ones."}
             </p>
           </div>
         ) : (
@@ -190,10 +190,8 @@ export default function GlobalBrandWordsPage() {
       {deleteConfirm && isAdmin && (
         <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center">
           <div className="bg-background border border-border rounded-xl shadow-xl max-w-sm w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold mb-2">Delete global brand word?</h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              This action cannot be undone. The brand word and all its associations
-              will be permanently removed.
+            <h3 className="text-lg font-semibold mb-2">Remove this from the shared catalog?</h3>
+            <p className="text-sm text-muted-foreground mb-5">This can't be undone. The brand word and all its concept associations will be removed from the shared catalog.
             </p>
             <div className="flex gap-3">
               <Button
