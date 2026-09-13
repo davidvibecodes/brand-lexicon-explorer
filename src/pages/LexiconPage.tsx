@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAction } from "convex/react";
+import { useAction, useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import GraphCanvas from "@/components/GraphCanvas";
 import { SearchBox } from "@/components/SearchBox";
@@ -8,20 +8,67 @@ import { NodePopover } from "@/components/NodePopover";
 import {
   pickRandomSeed,
   extractWordFromUri,
+  toConceptUri,
   COLORS,
   type GraphNode,
   type GraphEdge,
+  type RelatedEdge,
 } from "@/lib/conceptnet";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, List, Accessibility } from "lucide-react";
+import { RefreshCw, Plus, List, Accessibility, AlertCircle } from "lucide-react";
+import { useSearchParams } from "react-router";
+
+// Shape returned by the cache query (edge_cache rows).
+interface CachedEdgeRow {
+  start_uri: string;
+  end_uri: string;
+  relation: string;
+  weight: number;
+  surface_text?: string;
+}
+
+// Pull the raw query word out of a /c/en/ URI WITHOUT converting underscores
+// to spaces — that output is going straight back into a URI/API call, so it
+// must stay in ConceptNet's underscore form. (extractWordFromUri is for
+// display only.)
+function uriToQueryWord(uri: string): string {
+  return uri.startsWith("/c/en/") ? uri.slice("/c/en/".length) : uri;
+}
+
+// Normalize a cached edge_cache row (raw start/end) relative to the center
+// word's URI, producing the same RelatedEdge shape the live action returns.
+// Cached rows carry no labels, so the label is derived from the related
+// URI for display only.
+function normalizeCachedEdge(
+  row: CachedEdgeRow,
+  centerUri: string
+): RelatedEdge | null {
+  let relatedUri: string;
+  if (row.start_uri === centerUri) {
+    relatedUri = row.end_uri;
+  } else if (row.end_uri === centerUri) {
+    relatedUri = row.start_uri;
+  } else {
+    // Neither side is the center word — cache inconsistency; drop it.
+    return null;
+  }
+  return {
+    id: `${row.start_uri}|${row.relation}|${row.end_uri}`,
+    relatedUri,
+    relatedLabel: extractWordFromUri(relatedUri),
+    relation: row.relation,
+    weight: row.weight,
+    surfaceText: row.surface_text,
+  };
+}
 
 export default function LexiconPage() {
   const [centerWord, setCenterWord] = useState("");
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(0);
   const [popover, setPopover] = useState<{
     label: string;
     relation?: string;
@@ -30,43 +77,100 @@ export default function LexiconPage() {
   } | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [listView, setListView] = useState(false);
   const [viewMode, setViewMode] = useState<"graph" | "list">("graph");
 
   const fetchRelated = useAction(api.concepts.fetchRelated);
+  const upsertEdge = useMutation(api.cache.upsertEdge);
+  const insertConcept = useMutation(api.cache.insertConcept);
+  const convex = useConvex();
+  const [searchParams] = useSearchParams();
 
-  // Load a word's neighborhood
+  // Load a word's neighborhood.
+  // Order of operations per word page: 1) DB cache lookup, 2) live
+  // ConceptNet fetch on cache miss, 3) cache write-back after a live fetch.
   const loadWord = useCallback(
     async (word: string, currentOffset = 0, append = false) => {
       setLoading(true);
-      try {
-        const result = await fetchRelated({
-          word,
-          limit: 15,
-          offset: currentOffset,
-        });
+      if (!append) {
+        // Fresh center: clear old content so a failure lands on the error
+        // state instead of silently showing a stale graph.
+        setNodes([]);
+        setEdges([]);
+      }
 
+      const centerUri = toConceptUri(word);
+
+      try {
+        let result: RelatedEdge[];
+
+        // 1) Server-side cache first — revisits of a seen word are instant.
+        let cached: CachedEdgeRow[] | null = null;
+        try {
+          cached = await convex.query(api.cache.getCachedEdgesByUri, {
+            concept_uri: centerUri,
+            limit: 15,
+            offset: currentOffset,
+          });
+        } catch {
+          cached = null; // cache read failure → fall through to live fetch
+        }
+
+        if (cached && cached.length > 0) {
+          result = cached
+            .map((row) => normalizeCachedEdge(row, centerUri))
+            .filter((e): e is RelatedEdge => e !== null);
+        } else {
+          // 2) Cache miss → live ConceptNet fetch.
+          result = await fetchRelated({
+            word,
+            limit: 15,
+            offset: currentOffset,
+          });
+
+          // 3) Write back to the cache (non-blocking). Edges are stored
+          // oriented from the center word so cache reads normalize cleanly.
+          void Promise.all([
+            insertConcept({
+              concept_uri: centerUri,
+              label: extractWordFromUri(centerUri),
+              language: "en",
+              degree: result.length,
+            }),
+            ...result.map((e) =>
+              upsertEdge({
+                edge_id: e.id,
+                start_uri: centerUri,
+                end_uri: e.relatedUri,
+                relation: e.relation,
+                weight: e.weight,
+                surface_text: e.surfaceText,
+              })
+            ),
+          ]).catch((cacheErr) => {
+            console.error("Cache write-back failed:", cacheErr);
+          });
+        }
+
+        const maxWeight = Math.max(...result.map((e) => e.weight), 1);
+        const minWeight = Math.min(...result.map((e) => e.weight), 0);
+        const weightRange = maxWeight - minWeight || 1;
+
+        // Satellite nodes come strictly from relatedUri/relatedLabel.
         const newEdges: GraphEdge[] = result.map((e) => ({
-          source: e.startUri,
-          target: e.endUri,
+          source: centerUri,
+          target: e.relatedUri,
           relation: e.relation,
           weight: e.weight,
           surfaceText: e.surfaceText,
         }));
 
-        // Calculate distance from center for blur/opacity
-        const maxWeight = Math.max(...result.map((e) => e.weight), 1);
-        const minWeight = Math.min(...result.map((e) => e.weight), 0);
-        const weightRange = maxWeight - minWeight || 1;
-
         const newNodes: GraphNode[] = result.map((e) => {
-          const word = extractWordFromUri(e.endUri);
           const normalizedWeight = (e.weight - minWeight) / weightRange;
           const blur = 1 - normalizedWeight; // Lower weight = more blur
 
           return {
-            id: e.endUri,
-            label: word,
+            id: e.relatedUri,
+            label: e.relatedLabel,
             x: 0,
             y: 0,
             fx: null,
@@ -86,10 +190,9 @@ export default function LexiconPage() {
           });
           setEdges((prev) => [...prev, ...newEdges]);
         } else {
-          // Center node
           const centerNode: GraphNode = {
-            id: `/c/en/${word}`,
-            label: word,
+            id: centerUri,
+            label: extractWordFromUri(centerUri), // display only
             x: 0,
             y: 0,
             fx: 0,
@@ -104,15 +207,21 @@ export default function LexiconPage() {
           setEdges(newEdges);
         }
 
-        setCenterWord(word);
+        setError(null);
+        setCenterWord(uriToQueryWord(centerUri));
         setOffset(currentOffset + result.length);
         setHasMore(result.length === 15);
       } catch (err) {
         console.error("Failed to load word:", err);
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "Something went wrong while loading this word."
+        );
       }
       setLoading(false);
     },
-    [fetchRelated]
+    [fetchRelated, convex, insertConcept, upsertEdge]
   );
 
   // Load more edges
@@ -125,25 +234,31 @@ export default function LexiconPage() {
   // Randomize: pick a random seed word
   const randomize = useCallback(() => {
     const word = pickRandomSeed();
-    loadWord(word);
     setOffset(0);
     setHasMore(true);
+    loadWord(word);
   }, [loadWord]);
 
-  // Initial load
+  // Initial load: honor ?word= (view-as-graph deep link), else randomize
   useEffect(() => {
-    if (!centerWord) {
+    const initialWord = searchParams.get("word");
+    if (initialWord) {
+      loadWord(decodeURIComponent(initialWord));
+    } else {
       randomize();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle double-click to re-center
+  // Handle double-click to re-center. node.id is the related concept's URI;
+  // slice the raw segment (underscores intact) — never route the display
+  // label back through a URI.
   const handleNodeDoubleClick = useCallback(
     (node: GraphNode) => {
-      const word = node.label;
-      loadWord(word);
+      const word = uriToQueryWord(node.id);
       setOffset(0);
       setHasMore(true);
+      loadWord(word);
     },
     [loadWord]
   );
@@ -153,11 +268,9 @@ export default function LexiconPage() {
     (node: GraphNode, clientX: number, clientY: number) => {
       if (node.isCenter) return;
 
-      // Find the edge that connects this node to center
+      const centerUri = toConceptUri(centerWord);
       const connectingEdge = edges.find(
-        (e) =>
-          (e.source === `/c/en/${centerWord}` && e.target === node.id) ||
-          (e.source === node.id && e.target === `/c/en/${centerWord}`)
+        (e) => e.source === centerUri && e.target === node.id
       );
 
       setPopover({
@@ -170,22 +283,20 @@ export default function LexiconPage() {
     [edges, centerWord]
   );
 
-  // Search handler
+  // Search handler: SearchBox passes the full concept URI; slice the raw
+  // word segment out of it.
   const handleSearch = useCallback(
     (term: string) => {
-      const word = term.replace("/c/en/", "").replace(/_/g, " ");
-      loadWord(word);
       setOffset(0);
       setHasMore(true);
+      loadWord(uriToQueryWord(term));
     },
     [loadWord]
   );
 
   // Brand word save handler
-  const handleBrandWordSaved = useCallback((wordId: string) => {
-    // Close panel and re-center on the brand word
+  const handleBrandWordSaved = useCallback((_wordId: string) => {
     setPanelOpen(false);
-    setPanelWidth(0);
   }, []);
 
   return (
@@ -240,10 +351,7 @@ export default function LexiconPage() {
             <Button
               size="icon"
               className="h-8 w-8 bg-background/80 backdrop-blur-sm border border-border"
-              onClick={() => {
-                setPanelOpen(true);
-                setPanelWidth(420);
-              }}
+              onClick={() => setPanelOpen(true)}
               title="Add brand word"
             >
               <Plus className="h-4 w-4" />
@@ -252,13 +360,13 @@ export default function LexiconPage() {
         </div>
 
         {/* Center word label */}
-        {centerWord && (
+        {centerWord && !error && (
           <div className="absolute top-16 left-4 z-10">
             <div
               className="px-3 py-1.5 rounded-lg text-white text-sm font-semibold shadow-sm"
               style={{ backgroundColor: COLORS.blue }}
             >
-              {centerWord}
+              {extractWordFromUri(toConceptUri(centerWord))}
             </div>
           </div>
         )}
@@ -274,7 +382,7 @@ export default function LexiconPage() {
             }}
             onNodeDoubleClick={handleNodeDoubleClick}
             showMoreButton={
-              hasMore && !loading ? (
+              hasMore && !loading && !error ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -290,7 +398,7 @@ export default function LexiconPage() {
           <div className="h-full overflow-auto pt-24 pb-8 px-6">
             <div className="max-w-2xl mx-auto">
               <h3 className="text-lg font-semibold mb-4" style={{ color: COLORS.blue }}>
-                {centerWord} — Related Concepts
+                {extractWordFromUri(toConceptUri(centerWord))} — Related Concepts
               </h3>
               <div className="space-y-1">
                 {edges.map((edge, i) => {
@@ -330,7 +438,7 @@ export default function LexiconPage() {
                   );
                 })}
               </div>
-              {hasMore && (
+              {hasMore && !error && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -345,11 +453,46 @@ export default function LexiconPage() {
         )}
 
         {/* Loading overlay */}
-        {loading && nodes.length === 0 && (
+        {loading && nodes.length === 0 && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
             <div className="flex items-center gap-2 text-muted-foreground">
               <RefreshCw className="h-4 w-4 animate-spin" />
               <span className="text-sm">Loading concepts…</span>
+            </div>
+          </div>
+        )}
+
+        {/* Error / empty state — never a silent blank screen */}
+        {!loading && nodes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-3 text-center px-6">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">Couldn't load this word</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                {error ??
+                  "No related concepts were found for this word. Try another one."}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (centerWord) {
+                      loadWord(centerWord);
+                    } else {
+                      randomize();
+                    }
+                  }}
+                >
+                  Try again
+                </Button>
+                <Button size="sm" onClick={randomize}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Randomize
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -374,10 +517,7 @@ export default function LexiconPage() {
       {/* Add Brand Word Panel */}
       <AddBrandWordPanel
         isOpen={panelOpen}
-        onClose={() => {
-          setPanelOpen(false);
-          setPanelWidth(0);
-        }}
+        onClose={() => setPanelOpen(false)}
         mode="personal"
         onSaved={handleBrandWordSaved}
       />

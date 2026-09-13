@@ -4,6 +4,7 @@ import { useAction } from "convex/react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ConceptSuggestion } from "@/lib/conceptnet";
+import { extractWordFromUri } from "@/lib/conceptnet";
 
 interface Props {
   onSelect: (word: string) => void;
@@ -156,7 +157,7 @@ export function SearchBox({
                 <Search className="h-3 w-3 text-muted-foreground shrink-0" />
                 <span className="truncate">{s.label}</span>
                 <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                  {s.term.replace("/c/en/", "")}
+                  {extractWordFromUri(s.term)}
                 </span>
               </button>
             ))

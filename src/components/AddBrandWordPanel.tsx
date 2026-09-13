@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import type { BrandWord } from "@/lib/conceptnet";
-import { extractWordFromUri } from "@/lib/conceptnet";
+import { extractWordFromUri, toConceptUri } from "@/lib/conceptnet";
 
 interface Props {
   isOpen: boolean;
@@ -512,7 +512,13 @@ function SecondaryAssociationInput({
           className="h-8 px-2"
           onClick={() => {
             if (query.length >= 2) {
-              onAdd({ term: `/c/en/${query}`, label: query });
+              // ConceptNet URIs use underscores for spaces — normalize typed
+              // input through the shared helper instead of raw interpolation.
+              const trimmed = query.trim();
+              onAdd({
+                term: toConceptUri(trimmed),
+                label: trimmed,
+              });
               setQuery("");
               setResults([]);
               setIsOpen(false);

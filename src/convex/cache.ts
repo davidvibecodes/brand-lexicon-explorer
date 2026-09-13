@@ -3,6 +3,32 @@ import { v } from "convex/values";
 
 // ── Queries ─────────────────────────────────────────────────────────────
 
+// Label/URI prefix search over concepts already cached by this deployment.
+// Backs searchConcepts' cache-first tier (ConceptNet's /query endpoint has
+// no wildcard support, so prefix expansion happens here against our own
+// data instead). Exact match first, then by degree (connectivity).
+export const searchCachedConcepts = query({
+  args: { q: v.string() },
+  handler: async (ctx, { q }) => {
+    const prefix = `/c/en/${q}`;
+    const all = await ctx.db.query("concept_cache").collect();
+    return all
+      .filter((c) => c.concept_uri.startsWith(prefix))
+      .sort((a, b) => {
+        const aExact = a.concept_uri === prefix ? 1 : 0;
+        const bExact = b.concept_uri === prefix ? 1 : 0;
+        if (aExact !== bExact) return bExact - aExact;
+        return b.degree - a.degree;
+      })
+      .slice(0, 8)
+      .map((c) => ({
+        term: c.concept_uri,
+        label: c.label,
+        language: c.language,
+      }));
+  },
+});
+
 export const getCachedEdgesByWord = query({
   args: {
     word: v.string(),
@@ -10,7 +36,10 @@ export const getCachedEdgesByWord = query({
     offset: v.number(),
   },
   handler: async (ctx, { word, limit, offset }) => {
-    const term = `/c/en/${word.toLowerCase()}`;
+    // Mirror toConceptUri from the frontend lib: trim, lowercase, and
+    // convert spaces to underscores so multi-word concepts resolve to the
+    // same URI the rest of the app writes and reads.
+    const term = `/c/en/${word.trim().toLowerCase().replace(/\s+/g, "_")}`;
     const allEdges = await ctx.db
       .query("edge_cache")
       .withIndex("by_start", (q) => q.eq("start_uri", term))

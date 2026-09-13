@@ -9,6 +9,18 @@ export interface ConceptEdge {
   surfaceText?: string;
 }
 
+// Normalized edge returned by the fetchRelated action: always oriented so
+// that relatedUri/relatedLabel refer to whichever side of the ConceptNet
+// assertion is NOT the queried word, regardless of the original direction.
+export interface RelatedEdge {
+  id: string;
+  relatedUri: string;
+  relatedLabel: string;
+  relation: string;
+  weight: number;
+  surfaceText?: string;
+}
+
 export interface ConceptSuggestion {
   term: string;
   label: string;
@@ -114,6 +126,15 @@ export function extractWordFromUri(uri: string): string {
   const parts = uri.split("/");
   const last = parts[parts.length - 1];
   return last.replace(/_/g, " ");
+}
+
+// Convert a word into a ConceptNet English concept URI.
+// "ice cream" → "/c/en/ice_cream". Use this every time a word becomes a
+// /c/en/ path or query argument — never interpolate a raw word string.
+// extractWordFromUri above is for DISPLAY labels only; never feed its
+// space-converted output back into a URI or API call except via this helper.
+export function toConceptUri(word: string): string {
+  return `/c/en/${word.trim().toLowerCase().replace(/\s+/g, "_")}`;
 }
 
 export function getRelationShortLabel(relation: string): string {
